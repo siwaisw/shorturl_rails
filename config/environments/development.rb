@@ -61,6 +61,19 @@ Rails.application.configure do
   # Suppress logger output for asset requests.
   config.assets.quiet = true
 
+  # ── Logging ──────────────────────────────────────────────────────────────
+  # Tag every log line with the request UUID so all lines from one request
+  # can be correlated (matches what production already does).
+  config.log_tags = [ :request_id ]
+
+  # Log everything in development so debug blocks fire.
+  config.log_level = :debug
+
+  # Human-readable timestamp prefix: [2026-05-30 12:34:56] INFO  …
+  config.log_formatter = proc { |severity, time, _prog, msg|
+    "[#{time.strftime('%Y-%m-%d %H:%M:%S')}] #{severity.ljust(5)}  #{msg}\n"
+  }
+
   # Raises error for missing translations.
   # config.i18n.raise_on_missing_translations = true
 

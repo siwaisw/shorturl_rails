@@ -9,8 +9,10 @@ class UsersController < ApplicationController
 
     if @user.save
       session[:user_id] = @user.id
+      logger.info { "[User] Registered user_id=#{@user.id} ip=#{request.remote_ip}" }
       redirect_to dashboard_path, notice: "Welcome to ShortURL!"
     else
+      logger.warn { "[User] Registration failed error=#{@user.errors.full_messages.first.inspect} ip=#{request.remote_ip}" }
       flash.now[:alert] = @user.errors.full_messages.first
       render :new, status: :unprocessable_entity
     end

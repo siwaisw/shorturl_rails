@@ -219,7 +219,7 @@ All errors return a consistent JSON body:
 
 ### Who Uses the API?
 
-The web application itself does **not** consume the `/api/v1/` endpoints. It uses standard Rails server-rendered form submissions — when a user clicks "Shorten URL" the browser sends a `POST /short_urls` form request, the controller saves the record and redirects, and Rails renders the next page. That flow goes directly through the controller and model with no HTTP round-trip to the API layer.
+The web application itself does **not** consume the `/api/v1/` endpoints. It uses standard Rails server-rendered form submissions, when a user clicks "Shorten URL" the browser sends a `POST /short_urls` form request, the controller saves the record and redirects, and Rails renders the next page. That flow goes directly through the controller and model with no HTTP round-trip to the API layer.
 
 The REST API is designed for **external consumers**:
 
@@ -230,7 +230,7 @@ The REST API is designed for **external consumers**:
 | Third-party developer / integration | `POST /api/v1/urls` with a Bearer API key |
 | Browser extension | `POST /api/v1/urls` (JSON) |
 
-If the frontend were ever rebuilt as a React or Vue SPA, it would then consume the API — but that would be a separate architectural decision from the current server-rendered implementation.
+If the frontend were ever rebuilt as a React or Vue SPA, it would then consume the API but that would be a separate architectural decision from the current server-rendered implementation.
 
 ---
 
@@ -270,7 +270,7 @@ end
 
 ## Ruby on Rails Setup
 
-* **Ruby version:** 3.x
+* **Ruby version:** 3.x (see `.ruby-version`)
 * **Rails version:** 8.x
 
 * **System dependencies:** PostgreSQL, Redis (for caching)
@@ -281,8 +281,112 @@ end
 
 * **Database initialization:** `rails db:migrate db:seed`
 
-* **How to run the test suite:** `rails test` or `bundle exec rspec`
-
 * **Services:** Redis for caching hot URLs; Sidekiq or AWS Eventbridge for background cleanup jobs
 
-* **Deployment instructions:** 
+* **Deployment instructions:** Deploy via Heroku, Render, or Fly.io using the provided `Procfile`
+
+---
+
+## Unit Tests
+
+The test suite is written with **RSpec** and uses the following supporting libraries:
+
+| Library | Purpose |
+|---|---|
+| `rspec-rails` | Core test framework integrated with Rails |
+| `factory_bot_rails` | Test data factories — creates model instances without fixture files |
+| `shoulda-matchers` | One-line matchers for common Rails validations and associations |
+
+### Running the suite
+
+```bash
+# Run all specs
+bundle exec rspec
+
+# Run a specific file
+bundle exec rspec spec/models/short_url_spec.rb
+
+# Run a single example by line number
+bundle exec rspec spec/requests/sessions_spec.rb:42
+```
+
+### Test coverage
+
+**Model specs** (`spec/models/`)
+
+| Spec file | What is covered |
+|---|---|
+| `short_url_spec.rb` | `encode_base62` output for edge-case IDs, `before_create` expiry default, `after_create` key assignment, URL format validation, `belongs_to :user optional` |
+| `user_spec.rb` | `has_secure_password`, password length, `#authenticate`, email presence / format / case-insensitive uniqueness, `before_save` email downcasing, `dependent: :nullify` on short_urls |
+
+**Request specs** (`spec/requests/`)
+
+| Spec file | What is covered |
+|---|---|
+| `short_urls_spec.rb` | `POST /short_urls` with valid, blank, non-HTTP, and plain-string URLs; `GET /:key` for active, expired, and unknown keys including click-count increment |
+| `users_spec.rb` | `GET /signup` (guest and already-logged-in), `POST /signup` — valid creation, duplicate email, short password, mismatched confirmation, email case normalisation |
+| `sessions_spec.rb` | `GET /login` (guest and already-logged-in), `POST /login` — correct credentials, wrong password, unknown email, case-insensitive matching, whitespace trimming; `DELETE /logout` session clearing and post-logout protection |
+
+### Factories
+
+Factories live in `spec/factories/`. The `short_url` factory includes an `:expired` trait that back-dates `expires_at` to yesterday — useful for testing redirect behaviour on stale links.
+
+---
+
+## Rails Logger
+
+The application uses Rails' built-in `ActiveSupport::TaggedLogging` logger. Every log line is tagged with the **request UUID** so all messages belonging to one HTTP request can be correlated with a single grep.
+
+### Log levels
+
+Rails provides six levels. Use the right one so production operators can set a threshold without losing critical signal:
+
+| Level | When to use |
+|---|---|
+| `debug` | Detailed internal state — fires only in development. Always use **block syntax** (`logger.debug { "..." }`) so the string is never built if the level is inactive. |
+| `info` | Normal, expected business events: URL created, user registered, login, logout, redirect served. |
+| `warn` | Recoverable problems: validation failure, expired link accessed, failed login attempt, unauthenticated access. |
+| `error` | Something failed but the app kept running — unexpected exceptions, third-party service errors. |
+| `fatal` | Causes a crash and requires immediate intervention. |
+| `unknown` | Catch-all for messages that cannot be classified. |
+
+### Environment configuration
+
+| Environment | Log level | Extra behaviour |
+|---|---|---|
+| **development** | `debug` | Tagged with `request_id`; custom formatter adds a human-readable timestamp prefix: `[YYYY-MM-DD HH:MM:SS] LEVEL  message` |
+| **test** | `warn` | Silences `debug` and `info` so `rspec` output stays readable |
+| **production** | `info` (overridable via `RAILS_LOG_LEVEL` env var) | Tagged with `request_id`; writes to STDOUT via `ActiveSupport::TaggedLogging.logger` for capture by a log aggregator |
+
+### What this application logs
+
+All custom log messages use a `[Tag]` prefix and `key=value` pairs so they are machine-parseable:
+
+```
+[2026-05-30 12:00:01] INFO   [ShortUrl] Created short_key=0000007 expires_at=2027-05-30T12:00:01Z user_id=3
+[2026-05-30 12:00:02] WARN   [ShortUrl] Expired link accessed short_key=0000002 expired_at=2025-01-01T00:00:00Z ip=203.0.113.5
+[2026-05-30 12:00:03] INFO   [Session]  Login user_id=3 ip=203.0.113.5
+[2026-05-30 12:00:04] WARN   [Session]  Failed login ip=203.0.113.5 user_found=false
+[2026-05-30 12:00:05] INFO   [User]     Registered user_id=4 ip=203.0.113.5
+[2026-05-30 12:00:06] WARN   [Auth]     Unauthenticated access attempt action=dashboard#index ip=203.0.113.5
+[2026-05-30 12:00:07] DEBUG  [Dashboard] Loaded user_id=3 total_links=12 active=10 total_clicks=84
+```
+
+### What is never logged
+
+- **Passwords** — never referenced in any log call.
+- **Email addresses** — `user_id` is used for identity in all custom log messages. Rails' built-in `filter_parameters` already masks `:email` and `:passw` in the automatic request parameter lines.
+- **Full original URLs in failure paths** — avoids leaking potentially sensitive query strings or tokens embedded in URLs.
+- **Raw authentication tokens or session contents.**
+
+### Block syntax — why it matters
+
+```ruby
+# Bad — the string is built even when the log level would discard it
+logger.debug "Processing order #{expensive_method}"
+
+# Good — the block is only evaluated if debug logging is active
+logger.debug { "Processing order #{expensive_method}" }
+```
+
+In production at `INFO` level, every `debug` block is skipped entirely with zero string allocation cost. All `logger.debug` calls in this codebase use block syntax for this reason.

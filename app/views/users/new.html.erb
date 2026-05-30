@@ -1,0 +1,60 @@
+<% content_for :title, "Sign up — ShortURL" %>
+<%= render "shared/navbar" %>
+
+<div class="auth-wrapper">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <span class="nav-logo-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2.5"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+        </svg>
+      </span>
+      ShortURL
+    </div>
+
+    <h1>Create your account</h1>
+    <p class="auth-subtitle">Start shortening links and tracking your stats.</p>
+
+    <% if flash.now[:alert] %>
+      <div class="flash-error" role="alert">
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <%= flash.now[:alert] %>
+      </div>
+    <% end %>
+
+    <%= form_with model: @user, url: signup_path, class: "auth-form" do |f| %>
+      <div class="auth-field">
+        <%= f.label :email, "Email address" %>
+        <%= f.email_field :email, class: "url-input",
+            placeholder: "you@example.com", autofocus: true,
+            autocomplete: "email" %>
+      </div>
+      <div class="auth-field">
+        <%= f.label :password, "Password" %>
+        <%= f.password_field :password, class: "url-input",
+            placeholder: "Minimum 8 characters",
+            autocomplete: "new-password" %>
+      </div>
+      <div class="auth-field">
+        <%= f.label :password_confirmation, "Confirm password" %>
+        <%= f.password_field :password_confirmation, class: "url-input",
+            placeholder: "Repeat your password",
+            autocomplete: "new-password" %>
+      </div>
+      <%= f.submit "Create account", class: "shorten-btn" %>
+    <% end %>
+
+    <p class="auth-switch">
+      Already have an account? <%= link_to "Log in", login_path %>
+    </p>
+  </div>
+</div>

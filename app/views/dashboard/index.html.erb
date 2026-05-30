@@ -1,0 +1,93 @@
+<% content_for :title, "Dashboard — ShortURL" %>
+<%= render "shared/navbar" %>
+
+<div class="dashboard-wrapper">
+
+  <%# ── Header ─────────────────────────────────────────────── %>
+  <div class="dashboard-header">
+    <h1>Your Links</h1>
+    <p>Manage and track all the URLs you've shortened.</p>
+  </div>
+
+  <%# ── Summary cards ──────────────────────────────────────── %>
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-card-value"><%= @short_urls.size %></div>
+      <div class="stat-card-label">Total links</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-value"><%= @total_clicks %></div>
+      <div class="stat-card-label">Total clicks</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-value"><%= @active_count %></div>
+      <div class="stat-card-label">Active links</div>
+    </div>
+  </div>
+
+  <%# ── Links table ─────────────────────────────────────────── %>
+  <div class="urls-section">
+    <div class="urls-section-header">All links</div>
+
+    <% if @short_urls.empty? %>
+      <div class="empty-state">
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="1.25"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+        </svg>
+        <p>You haven't shortened any links yet.</p>
+        <%= link_to "Shorten your first link", root_path, class: "shorten-btn", style: "display:inline-flex;text-decoration:none;" %>
+      </div>
+    <% else %>
+      <div class="urls-table-wrap">
+        <table class="urls-table">
+          <thead>
+            <tr>
+              <th>Short link</th>
+              <th>Original URL</th>
+              <th>Clicks</th>
+              <th>Created</th>
+              <th>Status</th>
+              <th>Expires</th>
+              <th>Time left</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @short_urls.each do |url| %>
+              <% remaining = time_remaining(url.expires_at) %>
+              <tr>
+                <td data-label="Short link">
+                  <%= link_to "#{request.base_url}/#{url.short_key}",
+                        short_url_redirect_path(url.short_key),
+                        class: "url-short-link", target: "_blank", rel: "noopener" %>
+                </td>
+                <td data-label="Original URL">
+                  <span class="url-original" title="<%= url.original_url %>">
+                    <%= url.original_url %>
+                  </span>
+                </td>
+                <td data-label="Clicks"><strong><%= url.click_count %></strong></td>
+                <td data-label="Created"><%= url.created_at.strftime("%-d %b %Y") %></td>
+                <td data-label="Status">
+                  <% if remaining[:expired] %>
+                    <span class="badge badge-expired">Expired</span>
+                  <% else %>
+                    <span class="badge badge-active">Active</span>
+                  <% end %>
+                </td>
+                <td data-label="Expires"><%= url.expires_at.strftime("%-d %b %Y") %></td>
+                <td data-label="Time left"
+                    class="<%= remaining[:expired] ? 'time-expired' : 'time-active' %>">
+                  <%= remaining[:label] %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% end %>
+  </div>
+
+</div>

@@ -1,37 +1,6 @@
 <% content_for :title, "ShortURL — Shorten Your Links" %>
 
-<%# ── Navbar ─────────────────────────────────────────────── %>
-<nav class="navbar">
-  <a href="/" class="nav-logo">
-    <span class="nav-logo-icon">
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
-           fill="none" stroke="currentColor" stroke-width="2.5"
-           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-      </svg>
-    </span>
-    ShortURL
-  </a>
-
-  <button class="theme-toggle"
-          data-action="click->theme#toggle"
-          aria-label="Toggle dark / light mode">
-    <%# Moon — visible in light mode %>
-    <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="18" height="18"
-         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-    </svg>
-    <%# Sun — visible in dark mode %>
-    <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="18" height="18"
-         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <circle cx="12" cy="12" r="5"/>
-      <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
-    </svg>
-  </button>
-</nav>
+<%= render "shared/navbar" %>
 
 <main>
 
@@ -80,6 +49,37 @@
                    autofocus>
           </div>
 
+          <div class="expiry-row">
+            <label class="expiry-label" for="short_url_expires_in">Expires in</label>
+            <div class="expiry-wrap">
+              <%= select_tag "short_url[expires_in]",
+                  options_for_select([
+                    [ "30 minutes",  1_800    ],
+                    [ "1 hour",      3_600    ],
+                    [ "6 hours",     21_600   ],
+                    [ "12 hours",    43_200   ],
+                    [ "1 day",       86_400   ],
+                    [ "3 days",      259_200  ],
+                    [ "1 week",      604_800  ],
+                    [ "2 weeks",     1_209_600 ],
+                    [ "1 month",     2_592_000 ],
+                    [ "3 months",    7_776_000 ],
+                    [ "6 months",    15_552_000 ],
+                    [ "1 year",      31_536_000 ],
+                    [ "2 years",     63_072_000 ]
+                  ], 31_536_000),
+                  class: "expiry-select",
+                  id: "short_url_expires_in" %>
+              <span class="expiry-chevron" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </span>
+            </div>
+          </div>
+
           <button type="submit" class="shorten-btn">
             Shorten URL
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
@@ -91,7 +91,7 @@
           </button>
         <% end %>
 
-        <p class="url-hint">Links expire after 1 year by default &mdash; no sign-up required.</p>
+        <p class="url-hint">Link expires after the selected duration &mdash; no sign-up required.</p>
       </div>
 
       <%# ── Error flash ─────────────────────────────────────── %>
@@ -170,7 +170,7 @@
         </div>
         <h3>Paste Your Long URL</h3>
         <p>
-          Copy any long URL — from an article, product page, or document —
+          Copy any long URL from an article, product page, or document
           and paste it into the text box above.
         </p>
       </div>
@@ -187,7 +187,7 @@
         <h3>Generate Your Short Link</h3>
         <p>
           Click <strong>Shorten URL</strong>. The system encodes your link into a unique
-          7-character Base62 key — collision-free and instant.
+          7-character Base62 key, collision-free and instant.
         </p>
       </div>
 
@@ -206,8 +206,7 @@
         </div>
         <h3>Copy and Share</h3>
         <p>
-          Your short link is ready. Copy it and share it anywhere —
-          social media, emails, messages, or presentations.
+          Your short link is ready. Copy it and share it anywhere.
         </p>
       </div>
 

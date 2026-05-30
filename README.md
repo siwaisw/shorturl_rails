@@ -96,6 +96,159 @@ To generate a short, non-deducible key for each URL:
 
 Example: ID `12345` → Base62 → `"3d7"` (padded to 7 chars: `"0003d7X"`). The short URL becomes `https://shorturl.app/0003d7X`.
 
+## REST API Design
+
+The API is versioned and served under `/api/v1/`. The public redirect endpoint lives at the root level (`/:key`) since it is the primary read path and must remain as short as possible.
+
+**Base URL:** `https://shorturl.app`
+
+**Authentication:** All `/api/v1/` endpoints require a Bearer token in the `Authorization` header.
+```
+Authorization: Bearer <api_key>
+```
+
+The public `GET /:key` redirect endpoint requires no authentication.
+
+---
+
+### Endpoint Overview
+
+| Method   | Endpoint              | Description                          | Auth |
+|----------|-----------------------|--------------------------------------|------|
+| `POST`   | `/api/v1/urls`        | Create a new short URL               | Yes  |
+| `GET`    | `/api/v1/urls/:key`   | Retrieve URL details and analytics   | Yes  |
+| `PATCH`  | `/api/v1/urls/:key`   | Update the expiry date               | Yes  |
+| `DELETE` | `/api/v1/urls/:key`   | Delete a short URL                   | Yes  |
+| `GET`    | `/:key`               | Redirect to the original URL         | No   |
+
+---
+
+### POST /api/v1/urls — Create a short URL
+
+**Request body** (`application/json`)
+```json
+{
+  "url": "https://example.com/very/long/path?utm_source=email",
+  "expires_at": "2027-01-01T00:00:00Z"
+}
+```
+> `expires_at` is optional. Defaults to 1 year from the time of creation.
+
+**Response `201 Created`**
+```json
+{
+  "short_key":    "00003d7",
+  "short_url":    "https://shorturl.app/00003d7",
+  "original_url": "https://example.com/very/long/path?utm_source=email",
+  "click_count":  0,
+  "created_at":   "2026-05-30T12:00:00Z",
+  "expires_at":   "2027-05-30T12:00:00Z"
+}
+```
+
+---
+
+### GET /api/v1/urls/:key — Retrieve URL details
+
+**Response `200 OK`**
+```json
+{
+  "short_key":    "00003d7",
+  "short_url":    "https://shorturl.app/00003d7",
+  "original_url": "https://example.com/very/long/path",
+  "click_count":  142,
+  "created_at":   "2026-05-30T12:00:00Z",
+  "expires_at":   "2027-05-30T12:00:00Z"
+}
+```
+
+---
+
+### PATCH /api/v1/urls/:key — Update expiry date
+
+**Request body** (`application/json`)
+```json
+{
+  "expires_at": "2028-06-01T00:00:00Z"
+}
+```
+
+**Response `200 OK`** — returns the updated resource in the same shape as the `GET` response.
+
+---
+
+### DELETE /api/v1/urls/:key — Delete a short URL
+
+**Response `204 No Content`** — empty body on success.
+
+---
+
+### GET /:key — Redirect (public)
+
+**Response `301 Moved Permanently`**
+```
+Location: https://example.com/very/long/path
+```
+
+If the link has expired the server responds with `410 Gone` instead of redirecting.
+
+---
+
+### Error Response Format
+
+All errors return a consistent JSON body:
+```json
+{
+  "error": {
+    "code":    "not_found",
+    "message": "Short URL not found."
+  }
+}
+```
+
+| HTTP Status | Code                   | When it occurs                                      |
+|-------------|------------------------|-----------------------------------------------------|
+| `400`       | `invalid_url`          | `url` field is not a valid HTTP/HTTPS URL           |
+| `401`       | `unauthorized`         | Missing or invalid Bearer token                     |
+| `404`       | `not_found`            | `:key` does not match any record                    |
+| `410`       | `link_expired`         | Link exists but `expires_at` is in the past         |
+| `422`       | `validation_error`     | Request body is missing required fields             |
+| `429`       | `rate_limit_exceeded`  | Too many requests (see rate limiting below)         |
+
+---
+
+### Who Uses the API?
+
+The web application itself does **not** consume the `/api/v1/` endpoints. It uses standard Rails server-rendered form submissions — when a user clicks "Shorten URL" the browser sends a `POST /short_urls` form request, the controller saves the record and redirects, and Rails renders the next page. That flow goes directly through the controller and model with no HTTP round-trip to the API layer.
+
+The REST API is designed for **external consumers**:
+
+| Consumer | Endpoint used |
+|---|---|
+| Web app (browser form submission) | `POST /short_urls` and `GET /:key` directly via Rails controllers |
+| Mobile app | `POST /api/v1/urls`, `GET /api/v1/urls/:key` (JSON) |
+| Third-party developer / integration | `POST /api/v1/urls` with a Bearer API key |
+| Browser extension | `POST /api/v1/urls` (JSON) |
+
+If the frontend were ever rebuilt as a React or Vue SPA, it would then consume the API — but that would be a separate architectural decision from the current server-rendered implementation.
+
+---
+
+### Rate Limiting
+
+To protect the service, API requests are limited per API key:
+
+- **100 requests / minute** per key
+- Every response includes the following headers:
+
+| Header                  | Description                                   |
+|-------------------------|-----------------------------------------------|
+| `X-RateLimit-Limit`     | Maximum requests allowed per window           |
+| `X-RateLimit-Remaining` | Requests remaining in the current window      |
+| `X-RateLimit-Reset`     | Unix timestamp when the window resets         |
+
+When the limit is exceeded the server responds with `429 Too Many Requests` and the `Retry-After` header indicating how many seconds to wait.
+
 ## DB Cleanup
 Expired URLs should be removed periodically to reclaim storage and keep the database performant.
 

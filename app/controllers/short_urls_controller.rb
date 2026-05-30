@@ -1,6 +1,17 @@
 class ShortUrlsController < ApplicationController
+  # 30 mins to 2 years in seconds
+  ALLOWED_DURATIONS = [
+    1_800, 3_600, 21_600, 43_200,
+    86_400, 259_200, 604_800, 1_209_600,
+    2_592_000, 7_776_000, 15_552_000, 31_536_000, 63_072_000
+  ].freeze
+
   def create
-    @short_url = ShortUrl.new(short_url_params)
+    @short_url      = ShortUrl.new(short_url_params)
+    @short_url.user = current_user if logged_in?
+
+    duration = params.dig(:short_url, :expires_in).to_i
+    @short_url.expires_at = (ALLOWED_DURATIONS.include?(duration) ? duration : 1.year.to_i).seconds.from_now
 
     if @short_url.save
       flash[:short_url] = "#{request.base_url}/#{@short_url.short_key}"

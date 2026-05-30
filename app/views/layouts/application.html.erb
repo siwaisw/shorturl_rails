@@ -29,6 +29,9 @@
   </head>
 
   <body data-controller="theme">
+    <% if flash[:notice] %>
+      <div class="flash-notice" role="status"><%= flash[:notice] %></div>
+    <% end %>
     <%= yield %>
   </body>
 </html>

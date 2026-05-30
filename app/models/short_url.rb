@@ -21,8 +21,36 @@ class ShortUrl < ApplicationRecord
   # cleanable = expired AND already soft-deleted → ready for hard deletion
   scope :cleanable,    -> { expired.soft_deleted }
 
+  # ── Read-through redirect cache ─────────────────────────────
+  # Caches { id:, original_url:, expires_at: } per short_key so the hot
+  # redirect path avoids a SELECT on every request (80/20 rule: 20% of URLs
+  # generate 80% of traffic). The cache is busted on expiry update and deletion.
+  REDIRECT_CACHE_TTL = 6.hours
+
+  # Returns a plain-hash representation of the record, or nil on cache miss
+  # if the key does not exist. skip_nil: true prevents missing keys from being
+  # cached (avoids filling the cache with invalid-key misses).
+  def self.fetch_for_redirect(key)
+    Rails.cache.fetch("short_url:redirect:#{key}",
+                      expires_in: REDIRECT_CACHE_TTL,
+                      skip_nil: true) do
+      record = not_deleted.find_by(short_key: key)
+      record&.as_redirect_cache
+    end
+  end
+
+  def as_redirect_cache
+    { id: id, original_url: original_url, expires_at: expires_at }
+  end
+
+  # Bust the cache whenever expires_at is updated through the normal save path
+  # (e.g. PATCH /api/v1/urls/:key). soft_delete! uses update_column which
+  # bypasses callbacks, so it busts the cache explicitly (see below).
+  after_commit :bust_redirect_cache, if: -> { saved_change_to_expires_at? }
+
   def soft_delete!
     update_column(:deleted_at, Time.current)
+    bust_redirect_cache
   end
 
   # Encodes a positive integer into a zero-padded KEY_LENGTH Base62 string.
@@ -41,6 +69,11 @@ class ShortUrl < ApplicationRecord
   end
 
   private
+
+  def bust_redirect_cache
+    Rails.cache.delete("short_url:redirect:#{short_key}") if short_key.present?
+    Rails.logger.debug { "[Cache] Busted short_key=#{short_key}" }
+  end
 
   def original_url_must_be_valid
     return if original_url.blank?

@@ -62,6 +62,33 @@ Applying the 80/20 rule: 20% of URLs will account for 80% of redirect traffic. C
 
 A small in-memory cache (e.g. Redis) of ~5 MB would comfortably serve the hot URL set with significant headroom.
 
+### Cache Design
+
+The redirect hot path uses a **read-through cache** backed by `Rails.cache`. On each `GET /:key` request the application first checks the cache; only on a miss does it query the database, after which the result is written into the cache for subsequent requests.
+
+**Cache key:** `short_url:redirect:<short_key>`
+
+**Cached value** (plain hash, not an ActiveRecord object):
+
+| Field | Why it is stored |
+|---|---|
+| `id` | Used to issue the click-count `UPDATE` without loading the full record |
+| `original_url` | The redirect destination |
+| `expires_at` | Checked before redirecting so an expiry decision never requires a DB round-trip |
+
+**TTL:** 6 hours. Hot URLs are refreshed on every cache miss, so the TTL mainly controls how long cold (rarely accessed) URLs occupy memory before being evicted.
+
+**`skip_nil: true`** prevents nil results (requests for unknown keys) from being written to the cache. Without this a flood of invalid-key requests would fill the cache with useless entries.
+
+**Cache invalidation — two paths:**
+
+| Trigger | Mechanism |
+|---|---|
+| `expires_at` updated (e.g. `PATCH /api/v1/urls/:key`) | `after_commit` callback on the model fires when `expires_at` changes via `save`/`update!` |
+| URL soft-deleted (`soft_delete!`) | Explicit `Rails.cache.delete` call inside `soft_delete!` because `update_column` bypasses the ActiveRecord callback chain |
+
+**Click-count increment** — once the redirect data is read from the cache, the click counter is updated via a direct `UPDATE short_urls SET click_count = click_count + 1 WHERE id = ?`. This avoids re-fetching the full record and keeps the write path to a single SQL statement.
+
 ## Database Design
 A relational (SQL) database is used. The schema consists of two core tables:
 

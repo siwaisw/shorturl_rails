@@ -1,43 +1,41 @@
 require "rails_helper"
 
 RSpec.describe ShortUrl, type: :model do
-  # ── Associations ───────────────────────────────────────────
   describe "associations" do
     it { is_expected.to belong_to(:user).optional }
   end
 
-  # ── Validations ────────────────────────────────────────────
   describe "validations" do
     it { is_expected.to validate_presence_of(:original_url) }
 
     describe "original_url format" do
-      it "is valid with an HTTP URL" do
-        expect(build(:short_url, original_url: "http://example.com")).to be_valid
+      it "is a valid HTTP URL" do
+        expect(build(:short_url, original_url: "http://eating-chicken-nuggets-with-rubyonrails.com")).to be_valid
       end
 
-      it "is valid with an HTTPS URL" do
-        expect(build(:short_url, original_url: "https://example.com/path?q=1#anchor")).to be_valid
+      it "is a valid HTTPS URL" do
+        expect(build(:short_url, original_url: "https://testingchickynuggets.com/path?q=1#anchor")).to be_valid
       end
 
-      it "is invalid with an FTP URL" do
-        record = build(:short_url, original_url: "ftp://example.com")
+      it "is not a valid URL" do
+        record = build(:short_url, original_url: "ftp://spicy_nuggets.com")
         expect(record).not_to be_valid
         expect(record.errors[:original_url]).to include("must be a valid HTTP or HTTPS URL")
       end
 
-      it "is invalid when the scheme is missing" do
-        record = build(:short_url, original_url: "example.com/path")
+      it "is not a valid URL when the scheme is missing" do
+        record = build(:short_url, original_url: "chicken_nuggets.com/path")
         expect(record).not_to be_valid
         expect(record.errors[:original_url]).to include("must be a valid HTTP or HTTPS URL")
       end
 
-      it "is invalid with a plain string" do
-        record = build(:short_url, original_url: "not a url at all")
+      it "is not a valid URL with a plain string" do
+        record = build(:short_url, original_url: "i like chicken nuggets")
         expect(record).not_to be_valid
         expect(record.errors[:original_url]).to include("must be a valid HTTP or HTTPS URL")
       end
 
-      it "is invalid with only a scheme and no host" do
+      it "is not a valid URL with only a scheme and no host" do
         record = build(:short_url, original_url: "https://")
         expect(record).not_to be_valid
         expect(record.errors[:original_url]).to include("must be a valid HTTP or HTTPS URL")
@@ -45,7 +43,6 @@ RSpec.describe ShortUrl, type: :model do
     end
   end
 
-  # ── .encode_base62 ─────────────────────────────────────────
   describe ".encode_base62" do
     it "encodes 0 as seven zeros" do
       expect(described_class.encode_base62(0)).to eq("0000000")
@@ -75,7 +72,6 @@ RSpec.describe ShortUrl, type: :model do
     end
   end
 
-  # ── Callbacks ──────────────────────────────────────────────
   describe "callbacks" do
     describe "#set_expiry (before_create)" do
       it "sets expires_at to approximately 1 year from now by default" do
@@ -109,10 +105,54 @@ RSpec.describe ShortUrl, type: :model do
     end
   end
 
-  # ── :expired trait sanity check ────────────────────────────
   describe ":expired factory trait" do
     it "creates a record whose expires_at is in the past" do
       expect(create(:short_url, :expired).expires_at).to be < Time.current
+    end
+  end
+
+  # ── Redirect cache ──────────────────────────────────────────
+  describe "redirect cache" do
+    let!(:short_url) { create(:short_url) }
+    let(:cache_key)  { "short_url:redirect:#{short_url.short_key}" }
+
+    describe ".fetch_for_redirect" do
+      it "returns a hash with id, original_url, and expires_at" do
+        result = described_class.fetch_for_redirect(short_url.short_key)
+        expect(result).to eq(
+          id:           short_url.id,
+          original_url: short_url.original_url,
+          expires_at:   short_url.expires_at
+        )
+      end
+
+      it "returns nil for an unknown key" do
+        expect(described_class.fetch_for_redirect("zzzzzzz")).to be_nil
+      end
+
+      it "returns nil for a soft-deleted URL" do
+        short_url.soft_delete!
+        expect(described_class.fetch_for_redirect(short_url.short_key)).to be_nil
+      end
+    end
+
+    describe "cache invalidation" do
+      it "busts the cache when expires_at is updated" do
+        expect(Rails.cache).to receive(:delete).with(cache_key)
+        short_url.update!(expires_at: 2.years.from_now)
+      end
+
+      it "does not bust the cache when an unrelated attribute changes" do
+        expect(Rails.cache).not_to receive(:delete).with(cache_key)
+        short_url.update!(click_count: 5)
+      end
+    end
+
+    describe "#soft_delete!" do
+      it "busts the redirect cache" do
+        expect(Rails.cache).to receive(:delete).with(cache_key)
+        short_url.soft_delete!
+      end
     end
   end
 end

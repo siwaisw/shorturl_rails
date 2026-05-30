@@ -11,7 +11,14 @@ Rails.application.routes.draw do
   # Dashboard
   get "/dashboard", to: "dashboard#index", as: :dashboard
 
-  # URL shortener
+  # REST API — versioned under /api/v1/
+  namespace :api do
+    namespace :v1 do
+      resources :urls, only: %i[create show update destroy], param: :key
+    end
+  end
+
+  # URL shortener (web form)
   resources :short_urls, only: [ :create ]
 
   get "up" => "rails/health#show", as: :rails_health_check

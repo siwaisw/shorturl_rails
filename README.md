@@ -14,9 +14,11 @@ This web application is built with **Ruby on Rails**.
 8. Mobile responsive
 
 ## Extended Specs
-1. Links will expire after a default timespan with option for users to specify expiration time
-2. Shortened links should not be deducible
-3. Usage analytics and logging
+1. Users can sign up for account and log in
+2. Links will expire after a default timespan with option for users to specify expiration time
+3. Shortened links should not be deducible
+4. Usage dashboard and logging
+5. REST API available for external users
 
 # System Design Considerations
 Assume more redirect requests as compared to creation of new short URLs, therefore system will be read heavy. Assume the system gets 1000 new shortened URL requests each month with each shortened URL redirecting 20 times.

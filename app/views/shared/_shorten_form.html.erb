@@ -1,0 +1,107 @@
+<%# Locals:
+    #   autofocus (Boolean, default true) — set to false when the form sits
+    #   alongside other content (e.g. the dashboard) so focus isn't stolen.
+%>
+<% autofocus = local_assigns.fetch(:autofocus, true) %>
+
+<div class="url-card">
+  <%= form_with url: "/short_urls", method: :post, class: "url-form" do %>
+    <div class="input-wrap">
+      <span class="input-icon" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+        </svg>
+      </span>
+      <input type="url"
+             name="short_url[original_url]"
+             class="url-input"
+             placeholder="Paste your long URL here — e.g. https://example.com/very/long/path"
+             required
+             <%= "autofocus" if autofocus %>>
+    </div>
+
+    <div class="expiry-row">
+      <label class="expiry-label" for="short_url_expires_in">Expires in</label>
+      <div class="expiry-wrap">
+        <%= select_tag "short_url[expires_in]",
+            options_for_select([
+              [ "30 minutes",  1_800     ],
+              [ "1 hour",      3_600     ],
+              [ "6 hours",     21_600    ],
+              [ "12 hours",    43_200    ],
+              [ "1 day",       86_400    ],
+              [ "3 days",      259_200   ],
+              [ "1 week",      604_800   ],
+              [ "2 weeks",     1_209_600  ],
+              [ "1 month",     2_592_000  ],
+              [ "3 months",    7_776_000  ],
+              [ "6 months",    15_552_000 ],
+              [ "1 year",      31_536_000 ],
+              [ "2 years",     63_072_000 ]
+            ], 31_536_000),
+            class: "expiry-select",
+            id: "short_url_expires_in" %>
+        <span class="expiry-chevron" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+               viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+               stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </span>
+      </div>
+    </div>
+
+    <button type="submit" class="shorten-btn">
+      Shorten URL
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+           viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="5" y1="12" x2="19" y2="12"/>
+        <polyline points="12 5 19 12 12 19"/>
+      </svg>
+    </button>
+  <% end %>
+
+  <p class="url-hint">
+    Link expires after the selected duration<% unless logged_in? %> &mdash; no sign-up required<% end %>.
+  </p>
+</div>
+
+<%# ── Error flash ──────────────────────────────────────────── %>
+<% if flash[:alert] %>
+  <div class="flash-error" role="alert">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="12" y1="8"  x2="12"    y2="12"/>
+      <line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+    <%= flash[:alert] %>
+  </div>
+<% end %>
+
+<%# ── Result card ───────────────────────────────────────────── %>
+<% if flash[:short_url] %>
+  <div class="result-card" data-controller="clipboard">
+    <div class="result-header">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+           viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+      Your short link is ready!
+    </div>
+    <div class="result-body">
+      <code class="result-url" data-clipboard-target="source"><%= flash[:short_url] %></code>
+      <button class="copy-btn"
+              data-action="click->clipboard#copy"
+              data-clipboard-target="button">
+        Copy
+      </button>
+    </div>
+  </div>
+<% end %>

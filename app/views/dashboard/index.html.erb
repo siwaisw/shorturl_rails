@@ -9,6 +9,11 @@
     <p>Manage and track all the URLs you've shortened.</p>
   </div>
 
+  <%# ── Shorten form ───────────────────────────────────────── %>
+  <div class="dashboard-form-section">
+    <%= render "shared/shorten_form", autofocus: false %>
+  </div>
+
   <%# ── Summary cards ──────────────────────────────────────── %>
   <div class="stats-grid">
     <div class="stat-card">

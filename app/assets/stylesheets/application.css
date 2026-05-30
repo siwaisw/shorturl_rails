@@ -840,6 +840,22 @@ body {
   color: var(--text-soft);
 }
 
+/* Shorten form embedded in the dashboard */
+.dashboard-form-section {
+  margin-bottom: 32px;
+}
+
+.dashboard-form-section .url-card {
+  max-width: 100%;
+  margin: 0;
+}
+
+.dashboard-form-section .flash-error,
+.dashboard-form-section .result-card {
+  max-width: 100%;
+  margin-top: 12px;
+}
+
 /* Summary stat cards */
 .stats-grid {
   display: grid;

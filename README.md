@@ -85,7 +85,7 @@ A relational (SQL) database is used. The schema consists of two core tables:
 
 A unique index on `short_key` ensures fast O(1) lookups on every redirect.
 
-> **Scaling note:** At 1,000 new URLs/month a relational database (PostgreSQL or MySQL) is entirely sufficient. However, if request volume grows to **1 million or more new URL requests**, the write throughput and horizontal scaling limits of SQL become a bottleneck. At that point, migrating to a **NoSQL store** (such as DynamoDB, Cassandra, or Redis with persistence) is strongly recommended. NoSQL databases offer schema-free flexibility, built-in horizontal sharding, and sub-millisecond read performance at scale — which aligns well with the read-heavy nature of a URL shortener.
+> **Scaling note:** At 1,000 new URLs/month a relational database (PostgreSQL or MySQL) is entirely sufficient. However, if request volume grows to **10 million or more new URL requests**, the write throughput and horizontal scaling limits of SQL become a bottleneck. At that point, migrating to a **NoSQL store** (such as DynamoDB, Cassandra, or Redis with persistence) is strongly recommended. NoSQL databases offer schema-free flexibility, built-in horizontal sharding, and sub-millisecond read performance at scale, which aligns well with the read-heavy nature of a URL shortener.
 
 ## Encoding the Original URL
 To generate a short, non-deducible key for each URL:
@@ -117,8 +117,8 @@ end
 
 ## Ruby on Rails Setup
 
-* **Ruby version:** 3.x (see `.ruby-version`)
-* **Rails version:** 7.x
+* **Ruby version:** 3.x
+* **Rails version:** 8.x
 
 * **System dependencies:** PostgreSQL, Redis (for caching)
 
@@ -130,6 +130,6 @@ end
 
 * **How to run the test suite:** `rails test` or `bundle exec rspec`
 
-* **Services:** Redis for caching hot URLs; Sidekiq for background cleanup jobs
+* **Services:** Redis for caching hot URLs; Sidekiq or AWS Eventbridge for background cleanup jobs
 
-* **Deployment instructions:** Deploy via Heroku, Render, or Fly.io using the provided `Procfile`
+* **Deployment instructions:** 

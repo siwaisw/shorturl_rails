@@ -1,0 +1,222 @@
+<% content_for :title, "ShortURL — Shorten Your Links" %>
+
+<%# ── Navbar ─────────────────────────────────────────────── %>
+<nav class="navbar">
+  <a href="/" class="nav-logo">
+    <span class="nav-logo-icon">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="2.5"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+      </svg>
+    </span>
+    ShortURL
+  </a>
+
+  <button class="theme-toggle"
+          data-action="click->theme#toggle"
+          aria-label="Toggle dark / light mode">
+    <%# Moon — visible in light mode %>
+    <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+    </svg>
+    <%# Sun — visible in dark mode %>
+    <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="5"/>
+      <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+    </svg>
+  </button>
+</nav>
+
+<main>
+
+  <%# ── Hero ───────────────────────────────────────────────── %>
+  <section class="hero">
+    <div class="hero-blob hero-blob-1" aria-hidden="true"></div>
+    <div class="hero-blob hero-blob-2" aria-hidden="true"></div>
+
+    <div class="hero-content">
+      <div class="hero-badge">
+        <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11"
+             viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02
+                           12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+        </svg>
+        Fast, free URL shortening
+      </div>
+
+      <h1>
+        Shorten Your Links,<br>
+        <span class="gradient-text">Amplify Your Reach</span>
+      </h1>
+
+      <p class="hero-sub">
+        Transform long, unwieldy URLs into clean, shareable links in seconds.
+        No account required.
+      </p>
+
+      <%# ── URL input card ──────────────────────────────────── %>
+      <div class="url-card">
+        <%= form_with url: "/short_urls", method: :post, class: "url-form" do %>
+          <div class="input-wrap">
+            <span class="input-icon" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+                   viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+              </svg>
+            </span>
+            <input type="url"
+                   name="short_url[original_url]"
+                   class="url-input"
+                   placeholder="Paste your long URL here — e.g. https://example.com/very/long/path"
+                   required
+                   autofocus>
+          </div>
+
+          <button type="submit" class="shorten-btn">
+            Shorten URL
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="5" y1="12" x2="19" y2="12"/>
+              <polyline points="12 5 19 12 12 19"/>
+            </svg>
+          </button>
+        <% end %>
+
+        <p class="url-hint">Links expire after 1 year by default &mdash; no sign-up required.</p>
+      </div>
+
+      <%# ── Error flash ─────────────────────────────────────── %>
+      <% if flash[:alert] %>
+        <div class="flash-error" role="alert">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+               viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <%= flash[:alert] %>
+        </div>
+      <% end %>
+
+      <%# ── Result card ──────────────────────────────────────── %>
+      <% if flash[:short_url] %>
+        <div class="result-card" data-controller="clipboard">
+          <div class="result-header">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            Your short link is ready!
+          </div>
+          <div class="result-body">
+            <code class="result-url" data-clipboard-target="source"><%= flash[:short_url] %></code>
+            <button class="copy-btn"
+                    data-action="click->clipboard#copy"
+                    data-clipboard-target="button">
+              Copy
+            </button>
+          </div>
+        </div>
+      <% end %>
+
+      <%# ── Stats strip ─────────────────────────────────────── %>
+      <div class="hero-stats">
+        <div class="stat">
+          <span class="stat-value">62<sup style="font-size:0.65em">7</sup></span>
+          <span class="stat-label">Possible short links</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value">&lt;1s</span>
+          <span class="stat-label">Average redirect time</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value">1 yr</span>
+          <span class="stat-label">Default link lifespan</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <%# ── How It Works ───────────────────────────────────────── %>
+  <section class="how-it-works">
+    <div class="section-header">
+      <span class="section-label">How It Works</span>
+      <h2>Three steps to a shorter link</h2>
+      <p>No complexity, no fees. Paste, click, and share.</p>
+    </div>
+
+    <div class="steps">
+
+      <div class="step-card">
+        <span class="step-number">01</span>
+        <div class="step-icon" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28"
+               viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+            <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+          </svg>
+        </div>
+        <h3>Paste Your Long URL</h3>
+        <p>
+          Copy any long URL — from an article, product page, or document —
+          and paste it into the text box above.
+        </p>
+      </div>
+
+      <div class="step-card">
+        <span class="step-number">02</span>
+        <div class="step-icon" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28"
+               viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"
+               stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
+        </div>
+        <h3>Generate Your Short Link</h3>
+        <p>
+          Click <strong>Shorten URL</strong>. The system encodes your link into a unique
+          7-character Base62 key — collision-free and instant.
+        </p>
+      </div>
+
+      <div class="step-card">
+        <span class="step-number">03</span>
+        <div class="step-icon" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28"
+               viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"
+               stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="18" cy="5"  r="3"/>
+            <circle cx="6"  cy="12" r="3"/>
+            <circle cx="18" cy="19" r="3"/>
+            <line x1="8.59"  y1="13.51" x2="15.42" y2="17.49"/>
+            <line x1="15.41" y1="6.51"  x2="8.59"  y2="10.49"/>
+          </svg>
+        </div>
+        <h3>Copy and Share</h3>
+        <p>
+          Your short link is ready. Copy it and share it anywhere —
+          social media, emails, messages, or presentations.
+        </p>
+      </div>
+
+    </div>
+  </section>
+
+</main>
+
+<%# ── Footer ─────────────────────────────────────────────── %>
+<footer class="footer">
+  <p>&copy; <%= Date.current.year %> ShortURL &mdash; Built with Ruby on Rails.</p>
+</footer>

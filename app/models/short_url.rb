@@ -14,6 +14,17 @@ class ShortUrl < ApplicationRecord
   before_create :set_expiry
   after_create  :assign_short_key # assigned after_create so we have the auto-increment ID to encode
 
+  # ── Scopes used by CleanupExpiredUrlsJob ───────────────────
+  scope :not_deleted,  -> { where(deleted_at: nil) }
+  scope :soft_deleted, -> { where.not(deleted_at: nil) }
+  scope :expired,      -> { where("expires_at < ?", Time.current) }
+  # cleanable = expired AND already soft-deleted → ready for hard deletion
+  scope :cleanable,    -> { expired.soft_deleted }
+
+  def soft_delete!
+    update_column(:deleted_at, Time.current)
+  end
+
   # Encodes a positive integer into a zero-padded KEY_LENGTH Base62 string.
   # ID 12345 => "00003d7"
   def self.encode_base62(number)

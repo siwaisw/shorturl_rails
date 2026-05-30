@@ -33,7 +33,7 @@ class ShortUrlsController < ApplicationController
   end
 
   def redirect
-    short_url = ShortUrl.find_by(short_key: params[:key])
+    short_url = ShortUrl.not_deleted.find_by(short_key: params[:key])
 
     unless short_url
       logger.warn { "[ShortUrl] Unknown key short_key=#{params[:key].inspect} ip=#{request.remote_ip}" }

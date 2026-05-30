@@ -1,0 +1,15 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  short_key: MyString
+  original_url: MyText
+  user: one
+  click_count: 1
+  expires_at: 2026-05-30 20:57:37
+
+two:
+  short_key: MyString
+  original_url: MyText
+  user: two
+  click_count: 1
+  expires_at: 2026-05-30 20:57:37

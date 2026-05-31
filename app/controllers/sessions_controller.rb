@@ -11,7 +11,6 @@ class SessionsController < ApplicationController
       logger.info { "[Session] Login user_id=#{user.id} ip=#{request.remote_ip}" }
       redirect_to dashboard_path, notice: "Welcome back!"
     else
-      # Log at warn — a failed login may indicate a brute-force attempt.
       logger.warn { "[Session] Failed login ip=#{request.remote_ip} user_found=#{user.present?}" }
       flash.now[:alert] = "Invalid email or password."
       render :new, status: :unprocessable_entity

@@ -7,7 +7,7 @@ class AddDeletedAtToShortUrls < ActiveRecord::Migration[8.1]
     add_index :short_urls, :deleted_at
 
     # Compound index used by the cleanup job:
-    #   WHERE expires_at < NOW() AND deleted_at IS NOT NULL
+    # WHERE expires_at < NOW() AND deleted_at IS NOT NULL
     add_index :short_urls, [ :expires_at, :deleted_at ],
               name: "index_short_urls_on_cleanup_condition"
   end

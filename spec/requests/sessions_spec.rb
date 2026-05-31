@@ -1,11 +1,10 @@
 require "rails_helper"
 
 RSpec.describe "Sessions", type: :request do
-  let!(:user) { create(:user, email: "tester@example.com",
+  let!(:user) { create(:user, email: "chickynuggets@example.com",
                                password: "password123",
                                password_confirmation: "password123") }
 
-  # ── GET /login ─────────────────────────────────────────────
   describe "GET /login" do
     context "when not logged in" do
       it "returns 200" do
@@ -24,37 +23,36 @@ RSpec.describe "Sessions", type: :request do
     end
   end
 
-  # ── POST /login ────────────────────────────────────────────
   describe "POST /login" do
     context "with correct credentials" do
       it "sets session[:user_id] to the authenticated user's id" do
-        post login_path, params: { email: "tester@example.com", password: "password123" }
+        post login_path, params: { email: "chickynuggets@example.com", password: "password123" }
         expect(session[:user_id]).to eq(user.id)
       end
 
       it "redirects to the dashboard" do
-        post login_path, params: { email: "tester@example.com", password: "password123" }
+        post login_path, params: { email: "chickynuggets@example.com", password: "password123" }
         expect(response).to redirect_to(dashboard_path)
       end
 
       it "sets a welcome flash notice" do
-        post login_path, params: { email: "tester@example.com", password: "password123" }
+        post login_path, params: { email: "chickynuggets@example.com", password: "password123" }
         expect(flash[:notice]).to be_present
       end
 
       it "matches the email case-insensitively" do
-        post login_path, params: { email: "TESTER@EXAMPLE.COM", password: "password123" }
+        post login_path, params: { email: "CHICKYNUGGETS@EXAMPLE.COM", password: "password123" }
         expect(session[:user_id]).to eq(user.id)
       end
 
       it "matches even with surrounding whitespace in the email" do
-        post login_path, params: { email: "  tester@example.com  ", password: "password123" }
+        post login_path, params: { email: "  chickynuggets@example.com  ", password: "password123" }
         expect(session[:user_id]).to eq(user.id)
       end
     end
 
     context "with a wrong password" do
-      before { post login_path, params: { email: "tester@example.com", password: "wrongpassword" } }
+      before { post login_path, params: { email: "chickynuggets@example.com", password: "wrongpassword" } }
 
       it "does not set session[:user_id]" do
         expect(session[:user_id]).to be_nil
@@ -93,7 +91,6 @@ RSpec.describe "Sessions", type: :request do
     end
   end
 
-  # ── DELETE /logout ─────────────────────────────────────────
   describe "DELETE /logout" do
     before { post login_path, params: { email: user.email, password: "password123" } }
 

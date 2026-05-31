@@ -1,11 +1,6 @@
 require "rails_helper"
 
 RSpec.describe CleanupExpiredUrlsJob, type: :job do
-  # ── Fixtures ───────────────────────────────────────────────
-  # active_url      — expires in the future, no deleted_at  → untouched
-  # expired_url     — expires_at in the past, no deleted_at  → soft-deleted (phase 1)
-  #                   then immediately hard-deleted (phase 2 in same run)
-  # soft_deleted_url — expires_at in the past, deleted_at set → hard-deleted (phase 2)
   let!(:active_url)       { create(:short_url) }
   let!(:expired_url)      { create(:short_url, :expired) }
   let!(:soft_deleted_url) { create(:short_url, :soft_deleted) }
@@ -13,7 +8,6 @@ RSpec.describe CleanupExpiredUrlsJob, type: :job do
   describe "#perform" do
     subject(:run_job) { described_class.perform_now }
 
-    # ── Phase 1: soft-delete ─────────────────────────────────
     # Stub phase 2 so records survive long enough to inspect the soft-delete state.
     describe "phase 1 — soft-delete expired URLs" do
       before { allow_any_instance_of(described_class).to receive(:hard_delete_cleanable).and_return(0) }
@@ -34,7 +28,6 @@ RSpec.describe CleanupExpiredUrlsJob, type: :job do
       end
     end
 
-    # ── Phase 2: hard-delete ──────────────────────────────────
     describe "phase 2 — hard-delete soft-deleted expired URLs" do
       it "permanently removes URLs that are expired and soft-deleted" do
         run_job
@@ -56,7 +49,6 @@ RSpec.describe CleanupExpiredUrlsJob, type: :job do
       end
     end
 
-    # ── Batch size boundary ───────────────────────────────────
     describe "batching" do
       it "processes more records than BATCH_SIZE without error" do
         stub_const("CleanupExpiredUrlsJob::BATCH_SIZE", 2)
@@ -65,7 +57,6 @@ RSpec.describe CleanupExpiredUrlsJob, type: :job do
       end
     end
 
-    # ── Idempotency ───────────────────────────────────────────
     describe "idempotency" do
       it "is safe to run multiple times with no extra side effects" do
         run_job
@@ -76,7 +67,6 @@ RSpec.describe CleanupExpiredUrlsJob, type: :job do
     end
   end
 
-  # ── Scopes used by the job ────────────────────────────────
   describe "ShortUrl scopes" do
     it ".not_deleted excludes soft-deleted records" do
       expect(ShortUrl.not_deleted).to include(active_url, expired_url)
@@ -97,7 +87,6 @@ RSpec.describe CleanupExpiredUrlsJob, type: :job do
     end
   end
 
-  # ── soft_delete! instance method ─────────────────────────
   describe "#soft_delete!" do
     it "sets deleted_at to the current time" do
       expect { active_url.soft_delete! }.to change { active_url.reload.deleted_at }.from(nil)

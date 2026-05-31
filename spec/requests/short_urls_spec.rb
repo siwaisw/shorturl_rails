@@ -1,10 +1,9 @@
 require "rails_helper"
 
 RSpec.describe "ShortUrls", type: :request do
-  # ── POST /short_urls ───────────────────────────────────────
   describe "POST /short_urls" do
     context "with a valid HTTPS URL" do
-      let(:valid_params) { { short_url: { original_url: "https://example.com/some/path" } } }
+      let(:valid_params) { { short_url: { original_url: "https://chicken-nuggets.com/some/path" } } }
 
       it "redirects to the root path" do
         post short_urls_path, params: valid_params
@@ -31,7 +30,7 @@ RSpec.describe "ShortUrls", type: :request do
     context "with a valid HTTP URL" do
       it "creates a record" do
         expect {
-          post short_urls_path, params: { short_url: { original_url: "http://example.com" } }
+          post short_urls_path, params: { short_url: { original_url: "http://chicken-nuggets.com" } }
         }.to change(ShortUrl, :count).by(1)
       end
     end
@@ -57,7 +56,7 @@ RSpec.describe "ShortUrls", type: :request do
     end
 
     context "with a non-HTTP/HTTPS URL" do
-      let(:ftp_params) { { short_url: { original_url: "ftp://files.example.com" } } }
+      let(:ftp_params) { { short_url: { original_url: "ftp://chicken-nugget-files.example.com" } } }
 
       it "redirects to the root path" do
         post short_urls_path, params: ftp_params
@@ -79,20 +78,19 @@ RSpec.describe "ShortUrls", type: :request do
     context "with a bare string that is not a URL" do
       it "does not create a record" do
         expect {
-          post short_urls_path, params: { short_url: { original_url: "not-a-url" } }
+          post short_urls_path, params: { short_url: { original_url: "not-a-nugget" } }
         }.not_to change(ShortUrl, :count)
       end
     end
   end
 
-  # ── GET /:key ──────────────────────────────────────────────
   describe "GET /:key" do
     context "with a valid, non-expired key" do
-      let!(:short_url) { create(:short_url, original_url: "https://destination.example.com") }
+      let!(:short_url) { create(:short_url, original_url: "https://destination-nugget.example.com") }
 
       it "redirects to the original URL" do
         get "/#{short_url.short_key}"
-        expect(response).to redirect_to("https://destination.example.com")
+        expect(response).to redirect_to("https://destination-nugget.example.com")
       end
 
       it "responds with a 301 Moved Permanently status" do

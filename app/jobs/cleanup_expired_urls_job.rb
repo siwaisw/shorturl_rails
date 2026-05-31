@@ -6,7 +6,7 @@ class CleanupExpiredUrlsJob < ApplicationJob
   # Two-phase cleanup as described in the README:
   #
   #   Phase 1 — soft delete: mark every expired URL with deleted_at so the
-  #   record is preserved briefly for audit purposes before permanent removal.
+  #   record is preserved briefly before permanent removal.
   #
   #   Phase 2 — hard delete: permanently remove all records that are both
   #   expired (expires_at < NOW()) and already soft-deleted (deleted_at IS NOT NULL).

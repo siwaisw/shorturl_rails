@@ -300,19 +300,16 @@ end
 ## Ruby on Rails Setup
 
 * **Ruby version:** 3.x (see `.ruby-version`)
+
 * **Rails version:** 8.x
 
-* **System dependencies:** PostgreSQL, Redis (for caching)
+* **Database:** PostgreSQL/MySQL
 
 * **Configuration:** Copy `.env.example` to `.env` and fill in database credentials
 
 * **Database creation:** `rails db:create`
 
 * **Database initialization:** `rails db:migrate db:seed`
-
-* **Services:** Redis for caching hot URLs; Sidekiq or AWS Eventbridge for background cleanup jobs
-
-* **Deployment instructions:** Deploy via Heroku, Render, or Fly.io using the provided `Procfile`
 
 ---
 
@@ -359,6 +356,81 @@ bundle exec rspec spec/requests/sessions_spec.rb:42
 ### Factories
 
 Factories live in `spec/factories/`. The `short_url` factory includes an `:expired` trait that back-dates `expires_at` to yesterday — useful for testing redirect behaviour on stale links.
+
+---
+
+## System / UI Tests
+
+System specs drive the application through a real (or simulated) browser and assert on what the user actually sees. They live in `spec/system/` and are built on top of Capybara.
+
+### Supporting libraries
+
+| Library | Purpose |
+|---|---|
+| `capybara` | DSL for interacting with pages (`visit`, `fill_in`, `click_button`, `have_css`, etc.) |
+| `selenium-webdriver` | Drives a real Chrome browser for specs that need JavaScript |
+| `database_cleaner-active_record` | Truncates the database between JS specs so Selenium's server thread sees committed data |
+
+### Support files
+
+**`spec/support/capybara.rb`** — registers two drivers:
+
+| Driver | Used when | Why |
+|---|---|---|
+| `rack_test` | default (no `js: true`) | No browser process; runs in the same thread as the test so ActiveRecord transactions work normally. Fast. |
+| `selenium, :headless_chrome` | `js: true` examples | Full browser engine; required to test JavaScript behaviour such as Stimulus controllers and `fetch` calls. |
+
+**`spec/support/database_cleaner.rb`** — manages database cleanup:
+
+| Strategy | Used when | Why |
+|---|---|---|
+| `:transaction` | non-JS specs | Wraps each example in a transaction and rolls it back — no data persists, nothing to clean. |
+| `:truncation` | `js: true` specs | Commits data to the database (no wrapping transaction) so the Selenium server thread can see it; truncates all tables after each example. |
+
+`use_transactional_fixtures` is set to `false` in `rails_helper.rb` so RSpec's own transaction wrapper does not hide committed data from the Selenium thread. DatabaseCleaner handles cleanup for all spec types instead.
+
+**`spec/support/session_helpers.rb`** — provides a `sign_in_as(user)` helper available in all system specs. It visits the login page, fills in the email and password, and submits the form, so individual specs do not repeat that boilerplate.
+
+### What is covered
+
+**`spec/system/dashboard_spec.rb`**
+
+| Group | Examples |
+|---|---|
+| Stat cards | Total link count, total click count, active link count |
+| Links table | Row count, per-link click count, active badge, expired badge, short-link href |
+| Shorten form | Successful creation shows result card; invalid URL shows error message |
+| Authentication guard | Unauthenticated visit redirects to the login page |
+| Click-count auto-update (`js: true`) | Per-link count updates within 5 s of a redirect; total count updates within 5 s of a redirect |
+
+The auto-update specs exercise the full real-time loop: a `fetch` call triggers the redirect controller (which increments `click_count` via SQL), and the Stimulus polling controller picks up the change from the `/dashboard/stats` JSON endpoint and patches the DOM.
+
+### Running the suite
+
+```bash
+# All system specs (rack_test only — no Chrome required)
+bundle exec rspec spec/system/
+
+# Full suite including all spec types
+bundle exec rspec
+
+# System specs only, verbose output
+bundle exec rspec spec/system/ --format documentation
+```
+
+### Chrome requirement for JS specs
+
+The two `js: true` auto-update specs require Google Chrome and a matching ChromeDriver. Without Chrome they fail with a `WebDriverError: unable to connect` error; all other specs continue to pass.
+
+```bash
+# Debian / Ubuntu
+sudo apt install google-chrome-stable
+
+# Verify ChromeDriver is picked up
+chromedriver --version
+```
+
+Once Chrome is installed, re-run the full system spec file — all 13 examples should pass.
 
 ---
 

@@ -1,7 +1,6 @@
 require "rails_helper"
 
 RSpec.describe "Users", type: :request do
-  # ── GET /signup ────────────────────────────────────────────
   describe "GET /signup" do
     context "when not logged in" do
       it "returns 200" do
@@ -22,7 +21,6 @@ RSpec.describe "Users", type: :request do
     end
   end
 
-  # ── POST /signup ───────────────────────────────────────────
   describe "POST /signup" do
     let(:valid_params) do
       { user: { email: "new@example.com",

@@ -297,6 +297,39 @@ end
 
 ---
 
+## Creation Limits
+
+To prevent abuse, the application limits how many short URLs can be created per guest IP per day, and allows a configurable per-user quota.
+
+### Guest IP limit
+
+A daily counter is stored in `Rails.cache` under the key `url_guest_limit:<date>:<ip>`. On each `POST /short_urls` request the counter is read, incremented, and written back with a 25-hour TTL. If the new value exceeds `GUEST_DAILY_LIMIT` (currently **10**), the request is rejected with a flash alert encouraging the user to sign up.
+
+The 25-hour TTL (rather than midnight-aligned) prevents the edge case where a user exhausts the limit at 11:55 PM and can immediately reset it five minutes later.
+
+### Per-user quota
+
+A nullable `url_limit` integer column on the `users` table stores each user's cap. `nil` means no limit. When a logged-in user submits the form, `current_user.short_urls.count` is compared against `url_limit` before the record is saved. A user's limit can be raised or removed by updating this column (e.g. via an admin interface or direct DB update).
+
+### Atomicity trade-off
+
+The guest counter uses a **read → increment → write** sequence rather than an atomic increment call:
+
+```ruby
+count = Rails.cache.read(key).to_i + 1
+Rails.cache.write(key, count, expires_in: 25.hours)
+```
+
+| Cache backend | Atomic? | Implication |
+|---|---|---|
+| **Redis / Memcached** | Yes (native `INCR`) | Could use `Rails.cache.increment` for a single round-trip with no race window |
+| **Solid Cache** (Rails 8 default, SQLite-backed) | No — read and write are separate DB operations | Under concurrent requests two guests could both read the same value and both write `value + 1`, slightly under-counting usage |
+| **NullStore** (test environment) | N/A — reads always return `nil` | Tests stub `Rails.cache` with a `MemoryStore` to exercise the limit logic in isolation |
+
+At the traffic scale described in this document (< 1 req/sec) the race window is negligible. If the application ever needs strict enforcement at high concurrency, migrate the cache backend to Redis and replace the read/write pair with `Rails.cache.increment(key, 1, expires_in: 25.hours)`.
+
+---
+
 ## Ruby on Rails Setup
 
 * **Ruby version:** 3.x (see `.ruby-version`)
@@ -429,8 +462,6 @@ sudo apt install google-chrome-stable
 # Verify ChromeDriver is picked up
 chromedriver --version
 ```
-
-Once Chrome is installed, re-run the full system spec file — all 13 examples should pass.
 
 ---
 

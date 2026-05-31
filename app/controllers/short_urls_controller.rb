@@ -6,6 +6,10 @@ class ShortUrlsController < ApplicationController
     2_592_000, 7_776_000, 15_552_000, 31_536_000, 63_072_000
   ].freeze
 
+  GUEST_DAILY_LIMIT = 10
+
+  before_action :enforce_creation_limit, only: :create
+
   def create
     @short_url      = ShortUrl.new(short_url_params)
     @short_url.user = current_user if logged_in?
@@ -64,6 +68,26 @@ class ShortUrlsController < ApplicationController
   end
 
   private
+
+  def enforce_creation_limit
+    if logged_in?
+      limit = current_user.url_limit
+      if limit && current_user.short_urls.count >= limit
+        logger.warn { "[ShortUrl] User limit reached user_id=#{current_user.id} limit=#{limit}" }
+        flash[:alert] = "You've reached your link limit of #{limit}."
+        redirect_to root_path and return
+      end
+    else
+      key   = "url_guest_limit:#{Date.today}:#{request.remote_ip}"
+      count = Rails.cache.read(key).to_i + 1
+      Rails.cache.write(key, count, expires_in: 25.hours)
+      if count > GUEST_DAILY_LIMIT
+        logger.warn { "[ShortUrl] Guest daily limit reached ip=#{request.remote_ip}" }
+        flash[:alert] = "Daily link limit reached. Sign up for a higher limit."
+        redirect_to root_path and return
+      end
+    end
+  end
 
   def short_url_params
     params.require(:short_url).permit(:original_url)

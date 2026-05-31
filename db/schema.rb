@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_30_162152) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_31_000001) do
   create_table "short_urls", force: :cascade do |t|
     t.integer "click_count", default: 0, null: false
     t.datetime "created_at", null: false
@@ -33,6 +33,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_30_162152) do
     t.string "email", limit: 255, null: false
     t.string "password_digest"
     t.datetime "updated_at", null: false
+    t.integer "url_limit"
     t.index ["api_key"], name: "index_users_on_api_key", unique: true
     t.index ["email"], name: "index_users_on_email", unique: true
   end

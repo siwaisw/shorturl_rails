@@ -82,6 +82,96 @@ RSpec.describe "ShortUrls", type: :request do
         }.not_to change(ShortUrl, :count)
       end
     end
+
+    context "guest daily limit" do
+      let(:valid_params) { { short_url: { original_url: "https://chicken-nuggets.com/path" } } }
+      let(:cache_key) { "url_guest_limit:#{Date.today}:127.0.0.1" }
+      let(:cache) { ActiveSupport::Cache::MemoryStore.new }
+
+      before { allow(Rails).to receive(:cache).and_return(cache) }
+
+      it "allows creation when under the daily limit" do
+        cache.write(cache_key, ShortUrlsController::GUEST_DAILY_LIMIT - 1)
+        expect {
+          post short_urls_path, params: valid_params
+        }.to change(ShortUrl, :count).by(1)
+      end
+
+      it "blocks creation when the daily limit is already reached" do
+        cache.write(cache_key, ShortUrlsController::GUEST_DAILY_LIMIT)
+        expect {
+          post short_urls_path, params: valid_params
+        }.not_to change(ShortUrl, :count)
+      end
+
+      it "sets flash[:alert] when the limit is reached" do
+        cache.write(cache_key, ShortUrlsController::GUEST_DAILY_LIMIT)
+        post short_urls_path, params: valid_params
+        expect(flash[:alert]).to include("Daily link limit reached")
+      end
+
+      it "redirects to root when the limit is reached" do
+        cache.write(cache_key, ShortUrlsController::GUEST_DAILY_LIMIT)
+        post short_urls_path, params: valid_params
+        expect(response).to redirect_to(root_path)
+      end
+    end
+
+    context "user url_limit" do
+      let(:valid_params) { { short_url: { original_url: "https://chicken-nuggets.com/path" } } }
+
+      context "when the user has no limit set" do
+        let(:user) { create(:user, url_limit: nil) }
+
+        before { post login_path, params: { email: user.email, password: "password123" } }
+
+        it "allows creation without restriction" do
+          expect {
+            post short_urls_path, params: valid_params
+          }.to change(ShortUrl, :count).by(1)
+        end
+      end
+
+      context "when the user is under their limit" do
+        let(:user) { create(:user, url_limit: 3) }
+
+        before do
+          create_list(:short_url, 2, user: user)
+          post login_path, params: { email: user.email, password: "password123" }
+        end
+
+        it "allows creation" do
+          expect {
+            post short_urls_path, params: valid_params
+          }.to change(ShortUrl, :count).by(1)
+        end
+      end
+
+      context "when the user has reached their limit" do
+        let(:user) { create(:user, url_limit: 2) }
+
+        before do
+          create_list(:short_url, 2, user: user)
+          post login_path, params: { email: user.email, password: "password123" }
+        end
+
+        it "does not create a record" do
+          expect {
+            post short_urls_path, params: valid_params
+          }.not_to change(ShortUrl, :count)
+        end
+
+        it "sets flash[:alert] mentioning the limit" do
+          post short_urls_path, params: valid_params
+          expect(flash[:alert]).to include("link limit of 2")
+        end
+
+        it "redirects to root" do
+          post short_urls_path, params: valid_params
+          expect(response).to redirect_to(root_path)
+        end
+      end
+    end
   end
 
   describe "GET /:key" do

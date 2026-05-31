@@ -10,4 +10,12 @@ class DashboardController < ApplicationController
       "[Dashboard] Loaded user_id=#{current_user.id} total_links=#{@short_urls.size} active=#{@active_count} total_clicks=#{@total_clicks}"
     end
   end
+
+  def stats
+    urls = current_user.short_urls.pluck(:id, :click_count)
+    render json: {
+      total_clicks: urls.sum { |_, c| c },
+      links: urls.map { |id, count| { id: id, click_count: count } }
+    }
+  end
 end

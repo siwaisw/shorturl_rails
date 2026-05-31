@@ -9,7 +9,8 @@ Rails.application.routes.draw do
   delete "/logout",    to: "sessions#destroy", as: :logout
 
   # Dashboard
-  get "/dashboard", to: "dashboard#index", as: :dashboard
+  get "/dashboard",       to: "dashboard#index", as: :dashboard
+  get "/dashboard/stats", to: "dashboard#stats", as: :dashboard_stats
 
   # REST API — versioned under /api/v1/
   namespace :api do

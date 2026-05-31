@@ -14,22 +14,18 @@ class ShortUrl < ApplicationRecord
   before_create :set_expiry
   after_create  :assign_short_key # assigned after_create so we have the auto-increment ID to encode
 
-  # ── Scopes used by CleanupExpiredUrlsJob ───────────────────
   scope :not_deleted,  -> { where(deleted_at: nil) }
   scope :soft_deleted, -> { where.not(deleted_at: nil) }
   scope :expired,      -> { where("expires_at < ?", Time.current) }
-  # cleanable = expired AND already soft-deleted → ready for hard deletion
+  # cleanable = expired AND already soft-deleted ready for hard deletion
   scope :cleanable,    -> { expired.soft_deleted }
 
-  # ── Read-through redirect cache ─────────────────────────────
-  # Caches { id:, original_url:, expires_at: } per short_key so the hot
-  # redirect path avoids a SELECT on every request (80/20 rule: 20% of URLs
-  # generate 80% of traffic). The cache is busted on expiry update and deletion.
+  # Caches { id:, original_url:, expires_at: } per short_key so the hot redirect path avoids a SELECT on every request
+  # (80/20 rule: 20% of URLs generate 80% of traffic). The cache is busted on expiry update and deletion.
   REDIRECT_CACHE_TTL = 6.hours
 
-  # Returns a plain-hash representation of the record, or nil on cache miss
-  # if the key does not exist. skip_nil: true prevents missing keys from being
-  # cached (avoids filling the cache with invalid-key misses).
+  # Returns a plain-hash representation of the record, or nil on cache miss if the key does not exist.
+  # skip_nil: true prevents missing keys from being cached
   def self.fetch_for_redirect(key)
     Rails.cache.fetch("short_url:redirect:#{key}",
                       expires_in: REDIRECT_CACHE_TTL,
@@ -43,9 +39,6 @@ class ShortUrl < ApplicationRecord
     { id: id, original_url: original_url, expires_at: expires_at }
   end
 
-  # Bust the cache whenever expires_at is updated through the normal save path
-  # (e.g. PATCH /api/v1/urls/:key). soft_delete! uses update_column which
-  # bypasses callbacks, so it busts the cache explicitly (see below).
   after_commit :bust_redirect_cache, if: -> { saved_change_to_expires_at? }
 
   def soft_delete!

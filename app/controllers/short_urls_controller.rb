@@ -55,7 +55,7 @@ class ShortUrlsController < ApplicationController
       return
     end
 
-    # Increment via direct SQL — no need to reload the full record.
+    # Increment via direct SQL no need to reload the full record.
     ShortUrl.where(id: cached[:id]).update_all("click_count = click_count + 1")
 
     logger.info { "[ShortUrl] Redirect short_key=#{params[:key]} destination=#{destination}" }

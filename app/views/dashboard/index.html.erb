@@ -1,7 +1,9 @@
 <% content_for :title, "Dashboard — ShortURL" %>
 <%= render "shared/navbar" %>
 
-<div class="dashboard-wrapper">
+<div class="dashboard-wrapper"
+     data-controller="clicks"
+     data-clicks-url-value="<%= dashboard_stats_path %>">
 
   <%# ── Header ─────────────────────────────────────────────── %>
   <div class="dashboard-header">
@@ -21,7 +23,7 @@
       <div class="stat-card-label">Total links</div>
     </div>
     <div class="stat-card">
-      <div class="stat-card-value"><%= @total_clicks %></div>
+      <div class="stat-card-value" data-clicks-target="total"><%= @total_clicks %></div>
       <div class="stat-card-label">Total clicks</div>
     </div>
     <div class="stat-card">
@@ -73,7 +75,7 @@
                     <%= url.original_url %>
                   </span>
                 </td>
-                <td data-label="Clicks"><strong><%= url.click_count %></strong></td>
+                <td data-label="Clicks"><strong data-clicks-target="linkCount" data-id="<%= url.id %>"><%= url.click_count %></strong></td>
                 <td data-label="Created"><%= url.created_at.strftime("%-d %b %Y") %></td>
                 <td data-label="Status">
                   <% if remaining[:expired] %>

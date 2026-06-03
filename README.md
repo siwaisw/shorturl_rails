@@ -1,6 +1,8 @@
 # Technical Documentation
 Build a URL shortener like https://bit.ly
 
+[![CI](https://github.com/siwaisw/shorturl_rails/actions/workflows/ci.yml/badge.svg)](https://github.com/siwaisw/shorturl_rails/actions/workflows/ci.yml)
+
 This web application is built with **Ruby on Rails**.
 
 ## Live Demo

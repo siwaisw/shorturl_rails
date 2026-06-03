@@ -9,7 +9,6 @@ RSpec.describe "Api::V1::Urls", type: :request do
     JSON.parse(response.body)
   end
 
-  # ── Authentication ────────────────────────────────────────
   describe "Authentication" do
     it "returns 401 when the Authorization header is absent" do
       get "/api/v1/urls/0000001"
@@ -23,7 +22,6 @@ RSpec.describe "Api::V1::Urls", type: :request do
     end
   end
 
-  # ── POST /api/v1/urls ─────────────────────────────────────
   describe "POST /api/v1/urls" do
     context "with a valid URL" do
       let(:params) { { url: "https://example.com/long/path" } }
@@ -104,9 +102,30 @@ RSpec.describe "Api::V1::Urls", type: :request do
         expect(json_body.dig("error", "code")).to eq("invalid_url")
       end
     end
+
+    context "when the user has reached their url_limit" do
+      before { user.update!(url_limit: 1) }
+
+      it "returns 422 quota_exceeded when the limit is already reached" do
+        create(:short_url, user: user)
+        post "/api/v1/urls", params: { url: "https://example.com" }, headers: auth_headers
+        expect(response.status).to eq(422)
+        expect(json_body.dig("error", "code")).to eq("quota_exceeded")
+      end
+
+      it "allows creation when still under the limit" do
+        post "/api/v1/urls", params: { url: "https://example.com" }, headers: auth_headers
+        expect(response.status).to eq(201)
+      end
+
+      it "excludes soft-deleted URLs from the quota count" do
+        create(:short_url, :soft_deleted, user: user)
+        post "/api/v1/urls", params: { url: "https://example.com" }, headers: auth_headers
+        expect(response.status).to eq(201)
+      end
+    end
   end
 
-  # ── GET /api/v1/urls/:key ─────────────────────────────────
   describe "GET /api/v1/urls/:key" do
     let!(:short_url) { create(:short_url, user: user) }
 
@@ -156,7 +175,6 @@ RSpec.describe "Api::V1::Urls", type: :request do
     end
   end
 
-  # ── PATCH /api/v1/urls/:key ───────────────────────────────
   describe "PATCH /api/v1/urls/:key" do
     let!(:short_url) { create(:short_url, user: user) }
     let(:future_ts)  { 2.years.from_now.iso8601 }
@@ -217,7 +235,6 @@ RSpec.describe "Api::V1::Urls", type: :request do
     end
   end
 
-  # ── DELETE /api/v1/urls/:key ──────────────────────────────
   describe "DELETE /api/v1/urls/:key" do
     let!(:short_url) { create(:short_url, user: user) }
 
@@ -257,7 +274,6 @@ RSpec.describe "Api::V1::Urls", type: :request do
     end
   end
 
-  # ── Rate limiting ─────────────────────────────────────────
   describe "Rate limiting" do
     let!(:short_url) { create(:short_url, user: user) }
 

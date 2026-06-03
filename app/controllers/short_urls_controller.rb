@@ -18,6 +18,10 @@ class ShortUrlsController < ApplicationController
     @short_url.expires_at = (ALLOWED_DURATIONS.include?(duration) ? duration : 1.year.to_i).seconds.from_now
 
     if @short_url.save
+      # Increment the guest counter only after a confirmed successful save so that
+      # invalid submissions (failed validation) do not consume daily quota.
+      increment_guest_counter unless logged_in?
+
       logger.info do
         user_ctx = logged_in? ? "user_id=#{current_user.id}" : "user=guest"
         "[ShortUrl] Created short_key=#{@short_url.short_key} expires_at=#{@short_url.expires_at.iso8601} #{user_ctx}"
@@ -72,21 +76,27 @@ class ShortUrlsController < ApplicationController
   def enforce_creation_limit
     if logged_in?
       limit = current_user.url_limit
-      if limit && current_user.short_urls.count >= limit
+      if limit && current_user.short_urls.not_deleted.count >= limit
         logger.warn { "[ShortUrl] User limit reached user_id=#{current_user.id} limit=#{limit}" }
         flash[:alert] = "You've reached your link limit of #{limit}."
         redirect_to root_path and return
       end
     else
-      key   = "url_guest_limit:#{Date.today}:#{request.remote_ip}"
-      count = Rails.cache.read(key).to_i + 1
-      Rails.cache.write(key, count, expires_in: 25.hours)
-      if count > GUEST_DAILY_LIMIT
+      if Rails.cache.read(guest_daily_key).to_i >= GUEST_DAILY_LIMIT
         logger.warn { "[ShortUrl] Guest daily limit reached ip=#{request.remote_ip}" }
         flash[:alert] = "Daily link limit reached. Sign up for a higher limit."
         redirect_to root_path and return
       end
     end
+  end
+
+  def increment_guest_counter
+    count = Rails.cache.read(guest_daily_key).to_i + 1
+    Rails.cache.write(guest_daily_key, count, expires_in: 25.hours)
+  end
+
+  def guest_daily_key
+    "url_guest_limit:#{Time.zone.today}:#{request.remote_ip}"
   end
 
   def short_url_params

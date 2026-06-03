@@ -95,6 +95,32 @@ RSpec.describe User, type: :model do
     end
   end
 
+  # ── url_limit validation ───────────────────────────────────
+  describe "url_limit validation" do
+    it "is valid when url_limit is nil (no cap)" do
+      expect(build(:user, url_limit: nil)).to be_valid
+    end
+
+    it "is valid when url_limit is a positive integer" do
+      expect(build(:user, url_limit: 10)).to be_valid
+    end
+
+    it "is valid when url_limit is zero" do
+      expect(build(:user, url_limit: 0)).to be_valid
+    end
+
+    it "is invalid when url_limit is negative" do
+      user = build(:user, url_limit: -1)
+      expect(user).not_to be_valid
+      expect(user.errors[:url_limit]).to be_present
+    end
+
+    it "is invalid when url_limit is a non-integer" do
+      user = build(:user, url_limit: 1.5)
+      expect(user).not_to be_valid
+    end
+  end
+
   # ── has_many :short_urls ───────────────────────────────────
   describe "short_urls association" do
     it "nullifies user_id on short_urls when the user is destroyed" do

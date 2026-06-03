@@ -9,6 +9,12 @@ module Api
           return render_error(:unprocessable_entity, "validation_error", "url is required.")
         end
 
+        limit = @api_user.url_limit
+        if limit && @api_user.short_urls.not_deleted.count >= limit
+          return render_error(:unprocessable_entity, "quota_exceeded",
+                              "You have reached your link limit of #{limit}.")
+        end
+
         short_url = @api_user.short_urls.build(original_url: params[:url])
 
         if params[:expires_at].present?

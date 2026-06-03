@@ -85,7 +85,7 @@ RSpec.describe "ShortUrls", type: :request do
 
     context "guest daily limit" do
       let(:valid_params) { { short_url: { original_url: "https://chicken-nuggets.com/path" } } }
-      let(:cache_key) { "url_guest_limit:#{Date.today}:127.0.0.1" }
+      let(:cache_key) { "url_guest_limit:#{Time.zone.today}:127.0.0.1" }
       let(:cache) { ActiveSupport::Cache::MemoryStore.new }
 
       before { allow(Rails).to receive(:cache).and_return(cache) }
@@ -114,6 +114,18 @@ RSpec.describe "ShortUrls", type: :request do
         cache.write(cache_key, ShortUrlsController::GUEST_DAILY_LIMIT)
         post short_urls_path, params: valid_params
         expect(response).to redirect_to(root_path)
+      end
+
+      it "does not increment the counter when URL validation fails" do
+        cache.write(cache_key, 0)
+        post short_urls_path, params: { short_url: { original_url: "not-a-url" } }
+        expect(cache.read(cache_key)).to eq(0)
+      end
+
+      it "increments the counter only after a successful save" do
+        cache.write(cache_key, ShortUrlsController::GUEST_DAILY_LIMIT - 1)
+        post short_urls_path, params: valid_params
+        expect(cache.read(cache_key)).to eq(ShortUrlsController::GUEST_DAILY_LIMIT)
       end
     end
 
@@ -169,6 +181,21 @@ RSpec.describe "ShortUrls", type: :request do
         it "redirects to root" do
           post short_urls_path, params: valid_params
           expect(response).to redirect_to(root_path)
+        end
+      end
+
+      context "when soft-deleted URLs would push the count over the limit" do
+        let(:user) { create(:user, url_limit: 2) }
+
+        before do
+          create_list(:short_url, 2, user: user).each(&:soft_delete!)
+          post login_path, params: { email: user.email, password: "password123" }
+        end
+
+        it "allows creation because soft-deleted records are excluded from the quota" do
+          expect {
+            post short_urls_path, params: valid_params
+          }.to change(ShortUrl, :count).by(1)
         end
       end
     end

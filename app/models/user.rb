@@ -7,6 +7,7 @@ class User < ApplicationRecord
             uniqueness: { case_sensitive: false },
             format: { with: URI::MailTo::EMAIL_REGEXP }
   validates :password, length: { minimum: 8 }, allow_nil: true
+  validates :url_limit, numericality: { greater_than_or_equal_to: 0, only_integer: true, allow_nil: true }
 
   before_save   { self.email = email.downcase }
   before_create :generate_api_key

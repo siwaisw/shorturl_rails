@@ -19,6 +19,7 @@ export default class extends Controller {
         credentials: "same-origin"
       })
       if (!response.ok) return
+      if (!response.headers.get("Content-Type")?.includes("application/json")) return
       const data = await response.json()
 
       if (this.hasTotalTarget) {

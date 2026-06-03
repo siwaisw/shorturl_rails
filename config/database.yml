@@ -34,5 +34,5 @@ production:
     max_connections: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
     timeout: 5000
     database: shorturl_production
-    username: shorturl_user 
+    username: shorturluser
     password: <%= ENV["SHORTURL_DATABASE_PASSWORD"] %>

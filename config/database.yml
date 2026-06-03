@@ -28,7 +28,7 @@ test:
 # Store production database in the storage/ directory, which by default
 # is mounted as a persistent Docker volume in config/deploy.yml.
 production:
-  primary:
+  primary: &production_primary
     adapter: postgresql
     encoding: unicode
     max_connections: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
@@ -36,3 +36,12 @@ production:
     database: shorturl_production
     username: shorturluser
     password: <%= ENV["SHORTURL_DATABASE_PASSWORD"] %>
+  cache:
+    <<: *production_primary
+    database_tasks: false
+  queue:
+    <<: *production_primary
+    database_tasks: false
+  cable:
+    <<: *production_primary
+    database_tasks: false

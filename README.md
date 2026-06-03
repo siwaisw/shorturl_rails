@@ -3,6 +3,14 @@ Build a URL shortener like https://bit.ly
 
 This web application is built with **Ruby on Rails**.
 
+## Live Demo
+
+**[https://shorturl-rails.onrender.com/](https://shorturl-rails.onrender.com/)**
+
+Deployed on [Render](https://render.com/) using PostgreSQL as the production database.
+
+![ShortURL homepage](docs/screenshot.png)
+
 ## Specifications and Requirements
 1. Web application
 2. A Text box in the landing page to put the long URL in
@@ -16,9 +24,9 @@ This web application is built with **Ruby on Rails**.
 ## Extended Specs
 1. Users can sign up for account and log in
 2. Links will expire after a default timespan with option for users to specify expiration time
-3. Shortened links should not be deducible
-4. Usage dashboard and logging
-5. REST API available for external users
+3. Usage dashboard and logging
+4. REST API available for external users
+5. Daily limit on number of shortened links created by IP address and Users
 
 # System Design Considerations
 Assume more redirect requests as compared to creation of new short URLs, therefore system will be read heavy. Assume the system gets 1000 new shortened URL requests each month with each shortened URL redirecting 20 times.
@@ -336,7 +344,7 @@ At the traffic scale described in this document (< 1 req/sec) the race window is
 
 * **Rails version:** 8.x
 
-* **Database:** PostgreSQL/MySQL
+* **Database:** PostgreSQL (production), SQLite (test)
 
 * **Configuration:** Copy `.env.example` to `.env` and fill in database credentials
 

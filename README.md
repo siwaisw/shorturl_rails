@@ -2,6 +2,7 @@
 Build a URL shortener like https://bit.ly
 
 [![CI](https://github.com/siwaisw/shorturl_rails/actions/workflows/ci.yml/badge.svg)](https://github.com/siwaisw/shorturl_rails/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/siwaisw/shorturl_rails/graph/badge.svg)](https://codecov.io/gh/siwaisw/shorturl_rails)
 
 This web application is built with **Ruby on Rails**.
 
